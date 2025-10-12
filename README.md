@@ -26,7 +26,7 @@ This implementation fulfills SWEN's AI tech test requirements by creating a work
 
 ## 🚀 Live Prototype
 
-**🔗 Live API Endpoint:** https://ai-news-ingestion.vercel.app/api/v1/news/5772cc7a-8846-4c47-8c87-7548b4498823
+**🔗 Live API Endpoint:** https://ai-news-ingestion.vercel.app/api/v1/news/32529508-cca8-48d3-8720-38e9193f201a
 
 ## 🏗️ Architecture
 
