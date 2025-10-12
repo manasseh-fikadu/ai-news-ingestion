@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "name": "swen-ai-news-pipeline",
+  "builds": [
+    {
+      "src": "src/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/v1/news/(.*)",
+      "dest": "/src/index.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/src/index.js"
+    },
+    {
+      "src": "/",
+      "dest": "/src/index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "src/index.js": {
+      "maxDuration": 30
+    }
+  }
+}
