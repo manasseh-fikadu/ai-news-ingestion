@@ -10,9 +10,7 @@ This implementation fulfills SWEN's AI tech test requirements by creating a work
 
 ## 🚀 Live Prototype
 
-**🔗 Live API Endpoint:** [https://swen-ai-news-pipeline.vercel.app/api/v1/news/sample](https://swen-ai-news-pipeline.vercel.app/api/v1/news/sample)
-
-**📊 Health Check:** [https://swen-ai-news-pipeline.vercel.app/health](https://swen-ai-news-pipeline.vercel.app/health)
+**🔗 Live API Endpoint:** https://ai-news-ingestion.vercel.app/api/v1/news/5772cc7a-8846-4c47-8c87-7548b4498823
 
 ## 🏗️ Architecture
 
