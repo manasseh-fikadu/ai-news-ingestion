@@ -191,13 +191,3 @@ terraform plan -var="cloud_provider=aws" -var="environment=dev"
 # Apply configuration
 terraform apply -var="cloud_provider=aws" -var="environment=dev"
 ```
-
-### Supported Cloud Providers
-
-- **AWS:** EKS, ECR, ALB, VPC
-- **Alibaba Cloud:** ACK, ACR, SLB, VPC
----
-
-**Built with ❤️ for SWEN's AI Tech Test**
-
-*Transform plain text into intelligent, media-rich news experiences* 🚀
