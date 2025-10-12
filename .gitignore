@@ -111,7 +111,6 @@ Thumbs.db
 .gitignore
 
 # Terraform
-terraform/
 *.tfstate
 *.tfstate.*
 .terraform/
