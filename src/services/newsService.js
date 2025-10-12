@@ -9,8 +9,18 @@ const logger = require('../utils/logger');
 class NewsService {
   constructor() {
     this.newsStore = new Map(); // In-memory store for demo
-    this.storageFile = path.join(__dirname, '../../data/news.json');
+    this.storageFile = this.getStoragePath();
     this.initStorage();
+  }
+
+  getStoragePath() {
+    // Env-aware path: writable in both local and Vercel
+    const baseDir = process.env.NODE_ENV === 'production' 
+      ? '/tmp/data' 
+      : './data';
+    const filePath = path.join(baseDir, 'news.json');
+    logger.debug(`Using storage path: ${filePath}`);
+    return filePath;
   }
 
   async initStorage() {
@@ -22,7 +32,8 @@ class NewsService {
       // Load existing data
       await this.loadFromStorage();
     } catch (error) {
-      logger.warn('Could not initialize storage:', error.message);
+      logger.warn('Could not initialize storage (falling back to in-memory):', error.message);
+      this.newsStore.clear(); // Start fresh in-memory
     }
   }
 
@@ -40,6 +51,7 @@ class NewsService {
       logger.info(`Loaded ${this.newsStore.size} news articles from storage`);
     } catch (error) {
       logger.info('No existing storage file found, starting fresh');
+      // Don't throw—graceful fallback
     }
   }
 
@@ -49,7 +61,8 @@ class NewsService {
       await fs.writeFile(this.storageFile, JSON.stringify(newsData, null, 2));
       logger.debug('Saved news data to storage');
     } catch (error) {
-      logger.error('Failed to save to storage:', error.message);
+      logger.warn('Failed to save to storage (continuing with in-memory):', error.message);
+      // Don't throw—keep running
     }
   }
 
@@ -113,7 +126,7 @@ class NewsService {
       // Store the enriched news
       this.newsStore.set(enrichedNews.id, enrichedNews);
       
-      // Save to persistent storage
+      // Save to persistent storage (non-blocking)
       await this.saveToStorage();
 
       logger.info('Successfully processed news article:', enrichedNews.id);
@@ -189,6 +202,7 @@ class NewsService {
       return enrichedNews;
     } catch (error) {
       logger.error('Failed to seed sample data:', error);
+      return null;  // Graceful fail
     }
   }
 }
