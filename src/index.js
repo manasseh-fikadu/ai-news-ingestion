@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const newsRoutes = require('./routes/news');
 const logger = require('./utils/logger');
+const { connectMongo } = require('./db/mongo');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -69,10 +70,13 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  logger.info(`🚀 SWEN AI News Pipeline running on port ${PORT}`);
-  logger.info(`📡 Health check: http://localhost:${PORT}/health`);
-  logger.info(`📰 News API: http://localhost:${PORT}/api/v1/news`);
-});
+(async () => {
+  await connectMongo();
+  app.listen(PORT, () => {
+    logger.info(`🚀 SWEN AI News Pipeline running on port ${PORT}`);
+    logger.info(`📡 Health check: http://localhost:${PORT}/health`);
+    logger.info(`📰 News API: http://localhost:${PORT}/api/v1/news`);
+  });
+})();
 
 module.exports = app;

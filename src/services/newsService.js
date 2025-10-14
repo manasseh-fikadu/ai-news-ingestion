@@ -5,6 +5,8 @@ const qwenService = require('./qwenService');
 const mediaService = require('./mediaService');
 const contextService = require('./contextService');
 const logger = require('../utils/logger');
+const { isMongoConnected } = require('../db/mongo');
+let NewsModel; // lazy require to avoid circular issues during tests
 
 class NewsService {
   constructor() {
@@ -123,12 +125,24 @@ class NewsService {
         }
       };
 
-      // Store the enriched news
-      this.newsStore.set(enrichedNews.id, enrichedNews);
+      // Prefer MongoDB when available
+      if (isMongoConnected()) {
+        if (!NewsModel) {
+          // Lazy import to avoid loading mongoose when not needed
+          // eslint-disable-next-line global-require
+          NewsModel = require('../db/models/News');
+        }
+        await NewsModel.findOneAndUpdate(
+          { id: enrichedNews.id },
+          enrichedNews,
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } else {
+        // Store the enriched news in file-based storage
+        this.newsStore.set(enrichedNews.id, enrichedNews);
+        await this.saveToStorage();
+      }
       
-      // Save to persistent storage (non-blocking)
-      await this.saveToStorage();
-
       logger.info('Successfully processed news article:', enrichedNews.id);
       return enrichedNews;
 
@@ -139,18 +153,34 @@ class NewsService {
   }
 
   async getNewsById(id) {
-    // Ensure we have the latest data loaded
-    await this.loadFromStorage();
-    
-    const news = this.newsStore.get(id);
-    if (!news) {
-      throw new Error('News article not found');
+    if (isMongoConnected()) {
+      if (!NewsModel) {
+        // eslint-disable-next-line global-require
+        NewsModel = require('../db/models/News');
+      }
+      const doc = await NewsModel.findOne({ id }).lean();
+      if (!doc) throw new Error('News article not found');
+      return doc;
     }
+
+    // Fallback: file-based
+    await this.loadFromStorage();
+    const news = this.newsStore.get(id);
+    if (!news) throw new Error('News article not found');
     return news;
   }
 
   async getAllNews() {
-    // Ensure we have the latest data loaded
+    if (isMongoConnected()) {
+      if (!NewsModel) {
+        // eslint-disable-next-line global-require
+        NewsModel = require('../db/models/News');
+      }
+      const docs = await NewsModel.find({}).sort({ createdAt: -1 }).lean();
+      return docs;
+    }
+
+    // Fallback: file-based
     await this.loadFromStorage();
     return Array.from(this.newsStore.values());
   }
