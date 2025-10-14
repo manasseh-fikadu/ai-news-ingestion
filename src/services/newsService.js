@@ -158,7 +158,7 @@ class NewsService {
         // eslint-disable-next-line global-require
         NewsModel = require('../db/models/News');
       }
-      const doc = await NewsModel.findOne({ id }).lean();
+      const doc = await NewsModel.findOne({ id }).select('-_id -__v').lean();
       if (!doc) throw new Error('News article not found');
       return doc;
     }
@@ -176,7 +176,7 @@ class NewsService {
         // eslint-disable-next-line global-require
         NewsModel = require('../db/models/News');
       }
-      const docs = await NewsModel.find({}).sort({ createdAt: -1 }).lean();
+      const docs = await NewsModel.find({}).sort({ createdAt: -1 }).select('-_id -__v').lean();
       return docs;
     }
 
