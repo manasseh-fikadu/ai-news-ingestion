@@ -25,7 +25,6 @@ class MediaService {
 
   async getPexelsImage(title, tags) {
     const query = this.extractSearchTerms(title, tags);
-    console.log("query", query)
     const response = await axios.get(`https://api.pexels.com/v1/search`, {
       params: {
         query: query,
@@ -37,8 +36,6 @@ class MediaService {
       },
       timeout: 10000
     });
-
-    console.log("response", response.data)
 
     if (response.data.photos.length > 0) {
       return response.data.photos[0].src.large;
@@ -125,6 +122,9 @@ class MediaService {
         return videoUrl;
       }
       logger.warn('No YouTube videos found for query:', { q: query });
+      // Fallback to Piped (no API key) to try find a video
+      const piped = await this.getPipedVideo(query);
+      if (piped) return piped;
       return null;
     } catch (error) {
       logger.error('YouTube API error:', {
@@ -132,6 +132,40 @@ class MediaService {
         status: error.response?.status,
         statusText: error.response?.statusText
       });
+      // Fallback to Piped (no API key) if YouTube failed
+      try {
+        const query = this.extractSearchTerms(title, tags, true);
+        const piped = await this.getPipedVideo(query);
+        if (piped) return piped;
+      } catch (_) {}
+      return null;
+    }
+  }
+
+  async getPipedVideo(query) {
+    try {
+      // Use piped.video public API to search YouTube without a key
+      const resp = await axios.get('https://piped.video/api/v1/search', {
+        params: { q: query, region: 'ZA' },
+        timeout: 10000,
+        headers: { 'User-Agent': 'SWENNewsBot/1.0' }
+      });
+      const items = Array.isArray(resp.data?.items) ? resp.data.items : resp.data;
+      if (items && items.length > 0) {
+        const first = items.find(i => (i.type === 'video' || i.id || i.url));
+        if (first) {
+          const videoId = first.id || (first.url?.split('v=')[1]) || first.url?.replace('/watch/', '');
+          if (videoId) {
+            const url = `https://www.youtube.com/watch?v=${videoId}`;
+            logger.info('Piped fallback video found:', url);
+            return url;
+          }
+          if (first.url) return first.url;
+        }
+      }
+      return null;
+    } catch (e) {
+      logger.warn('Piped search fallback failed:', e.message);
       return null;
     }
   }

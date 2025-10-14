@@ -178,7 +178,7 @@ class ContextService {
         return {
           lat: location_data.lat,
           lng: location_data.lng,
-          map_url: `https://www.google.com/maps?q=${location_data.lat},${location_data.lng}&z=10`,
+          map_url: `https://www.openstreetmap.org/?mlat=${location_data.lat}&mlon=${location_data.lng}&zoom=10`,
           formatted_address: result.formatted_address
         };
       }
@@ -191,28 +191,23 @@ class ContextService {
 
   extractLocations(text) {
     // Extract potential location names from text
-    const locationPatterns = [
-      /(?:in|at|from|to)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
-      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:province|state|country|region)/g,
-      /(?:Cape Town|Johannesburg|Pretoria|Durban|South Africa|Africa)/g
+    const patterns = [
+      /(?:\b(?:in|at|from|to)\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
+      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:province|state|country|region)\b/g,
+      /(Cape Town|Johannesburg|Pretoria|Durban|South Africa|Africa)/g
     ];
-    
-    const locations = new Set();
-    
-    locationPatterns.forEach(pattern => {
-      const matches = text.match(pattern);
-      if (matches) {
-        matches.forEach(match => {
-          // Clean up the match
-          const location = match.replace(/(?:in|at|from|to)\s+/i, '').replace(/\s+(?:province|state|country|region)/i, '').trim();
-          if (location.length > 2) {
-            locations.add(location);
-          }
-        });
+
+    const results = new Set();
+
+    for (const pattern of patterns) {
+      let m;
+      while ((m = pattern.exec(text)) !== null) {
+        const candidate = (m[1] || m[0]).replace(/^(in|at|from|to)\s+/i, '').replace(/\s+(province|state|country|region)$/i, '').trim();
+        if (candidate && candidate.length > 2) results.add(candidate);
       }
-    });
-    
-    return Array.from(locations);
+    }
+
+    return Array.from(results);
   }
 
   getMockGeoContext(title, body) {

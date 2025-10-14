@@ -51,9 +51,11 @@ class QwenService {
         return this.getMockResponse(prompt);
       }
     } catch (error) {
-      logger.error('OpenRouter API error:', {
+      const status = error.response?.status;
+      const level = status === 401 || status === 403 ? 'warn' : 'error';
+      logger[level]('OpenRouter API error:', {
         message: error.message,
-        status: error.response?.status,
+        status,
         statusText: error.response?.statusText
       });
       // Fallback to mock response
