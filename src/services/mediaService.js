@@ -103,20 +103,20 @@ class MediaService {
   async getYouTubeVideo(title, tags) {
     try {
       const query = this.extractSearchTerms(title, tags, true);
-      logger.info('YouTube API search query:', query);
+      const params = {
+        part: 'snippet',
+        q: query,
+        type: 'video',
+        maxResults: 1,
+        key: this.googleApiKey,
+        safeSearch: 'moderate',
+        order: 'relevance',
+        regionCode: 'ZA',
+        relevanceLanguage: 'en'
+      };
+      logger.info('YouTube API search query:', { q: query, regionCode: params.regionCode });
       
-      const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
-        params: {
-          part: 'snippet',
-          q: query,
-          type: 'video',
-          maxResults: 1,
-          key: this.googleApiKey,
-          safeSearch: 'moderate',
-          order: 'relevance'
-        },
-        timeout: 10000
-      });
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/search', { params, timeout: 10000 });
 
       if (response.data && response.data.items && response.data.items.length > 0) {
         const video = response.data.items[0];
@@ -124,15 +124,13 @@ class MediaService {
         logger.info('YouTube video found:', videoUrl);
         return videoUrl;
       }
-      logger.warn('No YouTube videos found for query:', query);
+      logger.warn('No YouTube videos found for query:', { q: query });
       return null;
     } catch (error) {
       logger.error('YouTube API error:', {
         message: error.message,
         status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        query: this.extractSearchTerms(title, tags, true)
+        statusText: error.response?.statusText
       });
       return null;
     }
@@ -173,8 +171,9 @@ class MediaService {
     );
     
     const tagWords = tags.map(tag => tag.replace('#', '').toLowerCase());
-    
-    return is_video ? [...titleWords, ...tagWords].join(' ') : [...tagWords].join(' ');
+    const words = [...new Set([...titleWords, ...tagWords])];
+    const boosted = words.join(' ');
+    return boosted.trim() || title;
   }
 }
 

@@ -73,11 +73,13 @@ class NewsService {
       logger.info('Processing news article:', newsData.title);
 
       // Generate AI-enriched content
-      const [summary, tags, relevanceScore] = await Promise.all([
+      const [summaryRaw, tagsRaw, relevanceScore] = await Promise.all([
         qwenService.generateSummary(newsData.title, newsData.body),
         qwenService.generateTags(newsData.title, newsData.body),
         qwenService.calculateRelevanceScore(newsData.title, newsData.body)
       ]);
+      const summary = (summaryRaw || '').trim() || `${newsData.title}`;
+      const tags = Array.isArray(tagsRaw) && tagsRaw.length > 0 ? tagsRaw : ['#News', '#Africa'];
 
       // Get media content
       const [featuredImageUrl, relatedVideoUrl] = await Promise.all([
@@ -86,11 +88,12 @@ class NewsService {
       ]);
 
       // Generate media justification
-      const mediaJustification = await qwenService.generateMediaJustification(
+      const mediaJustificationRaw = await qwenService.generateMediaJustification(
         newsData.title, 
         newsData.body, 
         'image and video'
       );
+      const mediaJustification = (mediaJustificationRaw || '').trim() || 'Selected to visually represent the article topic.';
 
       // Get contextual information
       const [wikipediaSnippet, socialSentiment, searchTrend, geoContext] = await Promise.all([

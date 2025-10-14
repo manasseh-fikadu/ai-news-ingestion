@@ -26,7 +26,7 @@ async function fetchAndParseUrl(sourceUrl) {
     'User-Agent': 'SWENNewsBot/1.0 (+https://swen.example)'
   };
 
-  const response = await axios.get(sourceUrl, { headers, timeout: 20000 });
+  const response = await axios.get(sourceUrl, { headers, timeout: 20000, maxRedirects: 3, validateStatus: s => s >= 200 && s < 400 });
   const html = response.data;
   const $ = cheerio.load(html);
 
@@ -48,7 +48,7 @@ async function fetchAndParseUrl(sourceUrl) {
   const publisher = siteName || extractDomain(sourceUrl);
 
   // Published time from common meta tags
-  const published = (
+  let published = (
     $('meta[property="article:published_time"]').attr('content') ||
     $('meta[name="pubdate"]').attr('content') ||
     $('meta[name="publish-date"]').attr('content') ||
@@ -57,6 +57,15 @@ async function fetchAndParseUrl(sourceUrl) {
     $('meta[name="DC.date.issued"]').attr('content') ||
     $('meta[property="og:updated_time"]').attr('content')
   );
+  if (!published) {
+    // try common JSON-LD
+    const ld = $('script[type="application/ld+json"]').map((i, el) => $(el).text()).get().join('\n');
+    try {
+      const parsed = JSON.parse(ld);
+      const ldObj = Array.isArray(parsed) ? parsed.find(x => x.datePublished) : parsed;
+      if (ldObj?.datePublished) published = ldObj.datePublished;
+    } catch {}
+  }
   const published_at = toIsoDate(published) || null;
 
   // Body extraction heuristics

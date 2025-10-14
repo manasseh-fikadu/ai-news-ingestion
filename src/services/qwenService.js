@@ -9,7 +9,6 @@ class QwenService {
   }
 
   async generateContent(prompt, maxTokens = 1000) {
-    console.log("apiKey", this.apiKey)
     try {
       // If no API key, return mock response for demo
       if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
@@ -45,8 +44,6 @@ class QwenService {
         }
       );
 
-      console.log(response.data)
-
       if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
         return response.data.choices[0].message.content;
       } else {
@@ -57,8 +54,7 @@ class QwenService {
       logger.error('OpenRouter API error:', {
         message: error.message,
         status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
+        statusText: error.response?.statusText
       });
       // Fallback to mock response
       return this.getMockResponse(prompt);
