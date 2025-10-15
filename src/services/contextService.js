@@ -28,6 +28,11 @@ class ContextService {
 
   getMockWikipediaSnippet(topic) {
     const mockSnippets = {
+      'china': 'China is the world\'s most populous country and second-largest economy, known for its rich history, rapid economic development, and significant global influence.',
+      'trade war': 'A trade war is an economic conflict between countries involving tariffs, trade barriers, and other restrictions on imports and exports.',
+      'rare earth': 'Rare earth elements are a group of 17 chemical elements essential for modern technology, including electronics, renewable energy systems, and defense applications.',
+      'us-china': 'US-China relations refer to the complex diplomatic, economic, and strategic relationship between the United States and China, the world\'s two largest economies.',
+      'geopolitics': 'Geopolitics is the study of how geography, economics, and politics influence international relations and global power dynamics.',
       'renewable energy': 'Renewable energy is energy from sources that are naturally replenishing but flow-limited. It includes solar, wind, hydroelectric, and geothermal power.',
       'south africa': 'South Africa is a country in Southern Africa known for its diverse geography, rich mineral resources, and complex political history.',
       'solar power': 'Solar power is the conversion of energy from sunlight into electricity using photovoltaics or concentrated solar power systems.',
@@ -102,16 +107,40 @@ class ContextService {
   }
 
   getMockSocialSentiment(title, tags) {
+    const text = `${title} ${tags.join(' ')}`.toLowerCase();
+    
+    // Context-aware sentiment based on content
+    if (text.includes('china') && text.includes('trade')) {
+      const sentiments = [
+        '45% neutral sentiment (confidence: 60%)',
+        '52% mixed sentiment (confidence: 65%)',
+        '38% negative sentiment (confidence: 70%)',
+        '41% cautious sentiment (confidence: 55%)'
+      ];
+      const hash = this.simpleHash(title + tags.join(''));
+      return sentiments[hash % sentiments.length];
+    }
+    
+    if (text.includes('renewable') || text.includes('solar') || text.includes('energy')) {
+      const sentiments = [
+        '74% positive mentions on X in last 24h',
+        '68% positive sentiment across social platforms',
+        '82% positive engagement on LinkedIn',
+        '71% favorable discussion on Twitter',
+        '76% positive sentiment on Facebook',
+        '69% positive mentions on social media'
+      ];
+      const hash = this.simpleHash(title + tags.join(''));
+      return sentiments[hash % sentiments.length];
+    }
+    
+    // Default neutral sentiment
     const sentiments = [
-      '74% positive mentions on X in last 24h',
-      '68% positive sentiment across social platforms',
-      '82% positive engagement on LinkedIn',
-      '71% favorable discussion on Twitter',
-      '76% positive sentiment on Facebook',
-      '69% positive mentions on social media'
+      '55% neutral sentiment (confidence: 60%)',
+      '48% mixed sentiment (confidence: 65%)',
+      '52% moderate sentiment (confidence: 70%)',
+      '45% balanced sentiment (confidence: 55%)'
     ];
-
-    // Simple hash-based selection for consistency
     const hash = this.simpleHash(title + tags.join(''));
     return sentiments[hash % sentiments.length];
   }
@@ -123,15 +152,44 @@ class ContextService {
   }
 
   getMockSearchTrend(title, tags) {
+    const text = `${title} ${tags.join(' ')}`.toLowerCase();
+    
+    // Context-aware trends based on content
+    if (text.includes('china') && text.includes('trade')) {
+      const trends = [
+        "'China trade war' +234% trending",
+        "'US China tensions' +189% search increase",
+        "'Rare earth China' +156% this week",
+        "'Trade war 2024' +178% trending topics",
+        "'China export controls' +145% search growth",
+        "'US China relations' +167% trending"
+      ];
+      const hash = this.simpleHash(title + tags.join(''));
+      return trends[hash % trends.length];
+    }
+    
+    if (text.includes('renewable') || text.includes('solar') || text.includes('energy')) {
+      const trends = [
+        "'SA renewables' +150% this week",
+        "'African energy' +89% search increase",
+        "'Solar Africa' +134% trending",
+        "'Green energy' +112% this month",
+        "'Renewable power' +98% search growth",
+        "'Clean energy' +156% trending topics"
+      ];
+      const hash = this.simpleHash(title + tags.join(''));
+      return trends[hash % trends.length];
+    }
+    
+    // Default trends
     const trends = [
-      "'SA renewables' +150% this week",
-      "'African energy' +89% search increase",
-      "'Solar Africa' +134% trending",
-      "'Green energy' +112% this month",
-      "'Renewable power' +98% search growth",
-      "'Clean energy' +156% trending topics"
+      "'Global news' +78% this week",
+      "'International politics' +89% search increase",
+      "'World events' +67% trending",
+      "'Breaking news' +112% this month",
+      "'Current events' +98% search growth",
+      "'News analysis' +134% trending topics"
     ];
-
     const hash = this.simpleHash(title + tags.join(''));
     return trends[hash % trends.length];
   }
@@ -215,6 +273,13 @@ class ContextService {
     
     // Mock geo data based on content
     const geoData = {
+      'china': { lat: 35.86166, lng: 104.195397, country: 'China' },
+      'beijing': { lat: 39.9042, lng: 116.4074, country: 'China' },
+      'shanghai': { lat: 31.2304, lng: 121.4737, country: 'China' },
+      'united states': { lat: 39.8283, lng: -98.5795, country: 'United States' },
+      'usa': { lat: 39.8283, lng: -98.5795, country: 'United States' },
+      'us': { lat: 39.8283, lng: -98.5795, country: 'United States' },
+      'washington': { lat: 38.9072, lng: -77.0369, country: 'United States' },
       'south africa': { lat: -30.5595, lng: 22.9375, country: 'South Africa' },
       'cape town': { lat: -33.9249, lng: 18.4241, country: 'South Africa' },
       'johannesburg': { lat: -26.2041, lng: 28.0473, country: 'South Africa' },
@@ -229,7 +294,8 @@ class ContextService {
         return {
           lat: data.lat,
           lng: data.lng,
-          map_url: `https://www.openstreetmap.org/?mlat=${data.lat}&mlon=${data.lng}&zoom=10`
+          map_url: `https://www.openstreetmap.org/?mlat=${data.lat}&mlon=${data.lng}&zoom=10`,
+          formatted_address: data.country
         };
       }
     }
@@ -239,7 +305,8 @@ class ContextService {
     return {
       lat: defaultData.lat,
       lng: defaultData.lng,
-      map_url: `https://www.openstreetmap.org/?mlat=${defaultData.lat}&mlon=${defaultData.lng}&zoom=10`
+      map_url: `https://www.openstreetmap.org/?mlat=${defaultData.lat}&mlon=${defaultData.lng}&zoom=10`,
+      formatted_address: defaultData.country
     };
   }
 

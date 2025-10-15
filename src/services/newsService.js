@@ -193,6 +193,11 @@ class NewsService {
     const text = `${title} ${body}`.toLowerCase();
     
     const topics = [
+      'china trade war',
+      'rare earth',
+      'us-china relations',
+      'trade tensions',
+      'geopolitics',
       'renewable energy',
       'solar power',
       'wind energy',
@@ -213,7 +218,7 @@ class NewsService {
 
     // Extract first meaningful word from title
     const titleWords = title.split(' ').filter(word => 
-      word.length > 3 && !['the', 'and', 'for', 'with', 'from', 'this', 'that'].includes(word.toLowerCase())
+      word.length > 3 && !['the', 'and', 'for', 'with', 'from', 'this', 'that', 'says', 'didn', 'reignite'].includes(word.toLowerCase())
     );
 
     return titleWords[0] || 'news';

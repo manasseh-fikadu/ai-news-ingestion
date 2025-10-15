@@ -46,6 +46,9 @@ class MediaService {
   getMockImage(title, tags) {
     // Curated mock images based on content
     const mockImages = {
+      'china': 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=800&h=600&fit=crop',
+      'trade': 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=600&fit=crop',
+      'geopolitics': 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=600&fit=crop',
       'renewable': 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=800&h=600&fit=crop',
       'energy': 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?w=800&h=600&fit=crop',
       'africa': 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&h=600&fit=crop',
@@ -59,6 +62,12 @@ class MediaService {
     const tagsLower = tags.join(' ').toLowerCase();
     const searchText = `${titleLower} ${tagsLower}`;
 
+    if (searchText.includes('china') && searchText.includes('trade')) {
+      return mockImages.china;
+    }
+    if (searchText.includes('trade') || searchText.includes('geopolitics')) {
+      return mockImages.trade;
+    }
     if (searchText.includes('renewable') || searchText.includes('solar') || searchText.includes('wind')) {
       return mockImages.renewable;
     }
@@ -173,6 +182,9 @@ class MediaService {
   getMockVideo(title, tags) {
     // Curated mock videos based on content
     const mockVideos = {
+      'china': 'https://www.youtube.com/watch?v=ClZuu0W9JuU',
+      'trade': 'https://www.youtube.com/watch?v=ClZuu0W9JuU',
+      'geopolitics': 'https://www.youtube.com/watch?v=ClZuu0W9JuU',
       'renewable': 'https://www.youtube.com/watch?v=U3AZQJz--mg',
       'energy': 'https://www.youtube.com/watch?v=U3AZQJz--mg',
       'africa': 'https://www.youtube.com/watch?v=U3AZQJz--mg',
@@ -185,6 +197,12 @@ class MediaService {
     const tagsLower = tags.join(' ').toLowerCase();
     const searchText = `${titleLower} ${tagsLower}`;
 
+    if (searchText.includes('china') && searchText.includes('trade')) {
+      return mockVideos.china;
+    }
+    if (searchText.includes('trade') || searchText.includes('geopolitics')) {
+      return mockVideos.trade;
+    }
     if (searchText.includes('renewable') || searchText.includes('solar') || searchText.includes('wind')) {
       return mockVideos.renewable;
     }
@@ -201,10 +219,21 @@ class MediaService {
   extractSearchTerms(title, tags, is_video=false) {
     // Extract relevant search terms from title and tags
     const titleWords = title.toLowerCase().split(' ').filter(word => 
-      word.length > 3 && !['the', 'and', 'for', 'with', 'from', 'this', 'that'].includes(word)
+      word.length > 3 && !['the', 'and', 'for', 'with', 'from', 'this', 'that', 'says', 'didn', 'reignite'].includes(word)
     );
     
     const tagWords = tags.map(tag => tag.replace('#', '').toLowerCase());
+    
+    // For China trade articles, prioritize relevant terms
+    const text = `${title} ${tags.join(' ')}`.toLowerCase();
+    if (text.includes('china') && text.includes('trade')) {
+      const chinaTerms = ['china', 'trade', 'trump', 'rare', 'earth', 'export', 'controls', 'tensions'];
+      const relevantTerms = titleWords.filter(word => 
+        chinaTerms.some(term => word.includes(term) || term.includes(word))
+      );
+      return relevantTerms.join(' ') || 'china trade tensions';
+    }
+    
     const words = [...new Set([...titleWords, ...tagWords])];
     const boosted = words.join(' ');
     return boosted.trim() || title;
