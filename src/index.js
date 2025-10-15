@@ -71,12 +71,23 @@ app.use('*', (req, res) => {
 
 // Start server
 (async () => {
-  await connectMongo();
-  app.listen(PORT, () => {
-    logger.info(`🚀 SWEN AI News Pipeline running on port ${PORT}`);
-    logger.info(`📡 Health check: http://localhost:${PORT}/health`);
-    logger.info(`📰 News API: http://localhost:${PORT}/api/v1/news`);
-  });
+  try {
+    await connectMongo();
+    
+    // Only start HTTP server if not in Vercel production
+    if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+      app.listen(PORT, () => {
+        logger.info(`🚀 SWEN AI News Pipeline running on port ${PORT}`);
+        logger.info(`📡 Health check: http://localhost:${PORT}/health`);
+        logger.info(`📰 News API: http://localhost:${PORT}/api/v1/news`);
+      });
+    } else {
+      logger.info('🚀 SWEN AI News Pipeline ready for Vercel serverless functions');
+    }
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
 })();
 
 module.exports = app;
