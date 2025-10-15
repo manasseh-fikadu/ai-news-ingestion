@@ -129,18 +129,23 @@ class NewsService {
       };
 
       // Prefer MongoDB when available
-      if (isMongoConnected()) {
-        if (!NewsModel) {
-          // Lazy import to avoid loading mongoose when not needed
-          // eslint-disable-next-line global-require
-          NewsModel = require('../db/models/News');
+      try {
+        if (isMongoConnected()) {
+          if (!NewsModel) {
+            // Lazy import to avoid loading mongoose when not needed
+            // eslint-disable-next-line global-require
+            NewsModel = require('../db/models/News');
+          }
+          await NewsModel.findOneAndUpdate(
+            { id: enrichedNews.id },
+            enrichedNews,
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          );
+        } else {
+          throw new Error('MongoDB not connected');
         }
-        await NewsModel.findOneAndUpdate(
-          { id: enrichedNews.id },
-          enrichedNews,
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-      } else {
+      } catch (error) {
+        logger.warn('MongoDB save failed, falling back to file storage:', error.message);
         // Store the enriched news in file-based storage
         this.newsStore.set(enrichedNews.id, enrichedNews);
         await this.saveToStorage();
@@ -156,14 +161,18 @@ class NewsService {
   }
 
   async getNewsById(id) {
-    if (isMongoConnected()) {
-      if (!NewsModel) {
-        // eslint-disable-next-line global-require
-        NewsModel = require('../db/models/News');
+    try {
+      if (isMongoConnected()) {
+        if (!NewsModel) {
+          // eslint-disable-next-line global-require
+          NewsModel = require('../db/models/News');
+        }
+        const doc = await NewsModel.findOne({ id }).select('-_id -__v').lean();
+        if (!doc) throw new Error('News article not found');
+        return doc;
       }
-      const doc = await NewsModel.findOne({ id }).select('-_id -__v').lean();
-      if (!doc) throw new Error('News article not found');
-      return doc;
+    } catch (error) {
+      logger.warn('MongoDB query failed, falling back to file storage:', error.message);
     }
 
     // Fallback: file-based
@@ -174,13 +183,17 @@ class NewsService {
   }
 
   async getAllNews() {
-    if (isMongoConnected()) {
-      if (!NewsModel) {
-        // eslint-disable-next-line global-require
-        NewsModel = require('../db/models/News');
+    try {
+      if (isMongoConnected()) {
+        if (!NewsModel) {
+          // eslint-disable-next-line global-require
+          NewsModel = require('../db/models/News');
+        }
+        const docs = await NewsModel.find({}).sort({ createdAt: -1 }).select('-_id -__v').lean();
+        return docs;
       }
-      const docs = await NewsModel.find({}).sort({ createdAt: -1 }).select('-_id -__v').lean();
-      return docs;
+    } catch (error) {
+      logger.warn('MongoDB query failed, falling back to file storage:', error.message);
     }
 
     // Fallback: file-based

@@ -4,22 +4,22 @@
   "routes": [
     {
       "src": "/api/v1/news/(.*)",
-      "dest": "/src/index.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/health",
-      "dest": "/src/index.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/",
-      "dest": "/src/index.js"
+      "dest": "/api/index.js"
     }
   ],
   "env": {
     "NODE_ENV": "production"
   },
   "functions": {
-    "src/index.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   }
