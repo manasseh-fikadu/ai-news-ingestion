@@ -5,6 +5,8 @@ const qwenService = require('./qwenService');
 const mediaService = require('./mediaService');
 const contextService = require('./contextService');
 const logger = require('../utils/logger');
+const { isMongoConnected } = require('../db/mongo');
+let NewsModel; // lazy require to avoid circular issues during tests
 
 class NewsService {
   constructor() {
@@ -71,11 +73,13 @@ class NewsService {
       logger.info('Processing news article:', newsData.title);
 
       // Generate AI-enriched content
-      const [summary, tags, relevanceScore] = await Promise.all([
+      const [summaryRaw, tagsRaw, relevanceScore] = await Promise.all([
         qwenService.generateSummary(newsData.title, newsData.body),
         qwenService.generateTags(newsData.title, newsData.body),
         qwenService.calculateRelevanceScore(newsData.title, newsData.body)
       ]);
+      const summary = (summaryRaw || '').trim() || `${newsData.title}`;
+      const tags = Array.isArray(tagsRaw) && tagsRaw.length > 0 ? tagsRaw : ['#News', '#Africa'];
 
       // Get media content
       const [featuredImageUrl, relatedVideoUrl] = await Promise.all([
@@ -84,11 +88,12 @@ class NewsService {
       ]);
 
       // Generate media justification
-      const mediaJustification = await qwenService.generateMediaJustification(
+      const mediaJustificationRaw = await qwenService.generateMediaJustification(
         newsData.title, 
         newsData.body, 
         'image and video'
       );
+      const mediaJustification = (mediaJustificationRaw || '').trim() || 'Selected to visually represent the article topic.';
 
       // Get contextual information
       const [wikipediaSnippet, socialSentiment, searchTrend, geoContext] = await Promise.all([
@@ -123,12 +128,24 @@ class NewsService {
         }
       };
 
-      // Store the enriched news
-      this.newsStore.set(enrichedNews.id, enrichedNews);
+      // Prefer MongoDB when available
+      if (isMongoConnected()) {
+        if (!NewsModel) {
+          // Lazy import to avoid loading mongoose when not needed
+          // eslint-disable-next-line global-require
+          NewsModel = require('../db/models/News');
+        }
+        await NewsModel.findOneAndUpdate(
+          { id: enrichedNews.id },
+          enrichedNews,
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } else {
+        // Store the enriched news in file-based storage
+        this.newsStore.set(enrichedNews.id, enrichedNews);
+        await this.saveToStorage();
+      }
       
-      // Save to persistent storage (non-blocking)
-      await this.saveToStorage();
-
       logger.info('Successfully processed news article:', enrichedNews.id);
       return enrichedNews;
 
@@ -139,18 +156,34 @@ class NewsService {
   }
 
   async getNewsById(id) {
-    // Ensure we have the latest data loaded
-    await this.loadFromStorage();
-    
-    const news = this.newsStore.get(id);
-    if (!news) {
-      throw new Error('News article not found');
+    if (isMongoConnected()) {
+      if (!NewsModel) {
+        // eslint-disable-next-line global-require
+        NewsModel = require('../db/models/News');
+      }
+      const doc = await NewsModel.findOne({ id }).select('-_id -__v').lean();
+      if (!doc) throw new Error('News article not found');
+      return doc;
     }
+
+    // Fallback: file-based
+    await this.loadFromStorage();
+    const news = this.newsStore.get(id);
+    if (!news) throw new Error('News article not found');
     return news;
   }
 
   async getAllNews() {
-    // Ensure we have the latest data loaded
+    if (isMongoConnected()) {
+      if (!NewsModel) {
+        // eslint-disable-next-line global-require
+        NewsModel = require('../db/models/News');
+      }
+      const docs = await NewsModel.find({}).sort({ createdAt: -1 }).select('-_id -__v').lean();
+      return docs;
+    }
+
+    // Fallback: file-based
     await this.loadFromStorage();
     return Array.from(this.newsStore.values());
   }
@@ -160,6 +193,11 @@ class NewsService {
     const text = `${title} ${body}`.toLowerCase();
     
     const topics = [
+      'china trade war',
+      'rare earth',
+      'us-china relations',
+      'trade tensions',
+      'geopolitics',
       'renewable energy',
       'solar power',
       'wind energy',
@@ -180,7 +218,7 @@ class NewsService {
 
     // Extract first meaningful word from title
     const titleWords = title.split(' ').filter(word => 
-      word.length > 3 && !['the', 'and', 'for', 'with', 'from', 'this', 'that'].includes(word.toLowerCase())
+      word.length > 3 && !['the', 'and', 'for', 'with', 'from', 'this', 'that', 'says', 'didn', 'reignite'].includes(word.toLowerCase())
     );
 
     return titleWords[0] || 'news';

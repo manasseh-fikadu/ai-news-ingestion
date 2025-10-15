@@ -1,6 +1,7 @@
 const express = require('express');
 const Joi = require('joi');
 const newsService = require('../services/newsService');
+const ingestionService = require('../services/ingestionService');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -12,6 +13,15 @@ const newsIngestionSchema = Joi.object({
   source_url: Joi.string().uri().required(),
   publisher: Joi.string().min(2).max(100).required(),
   published_at: Joi.string().isoDate().required()
+});
+
+const urlIngestionSchema = Joi.object({
+  url: Joi.string().uri().required()
+});
+
+const rssIngestionSchema = Joi.object({
+  feed_url: Joi.string().uri().required(),
+  limit: Joi.number().integer().min(1).max(10).optional()
 });
 
 // POST /api/v1/news/ingest - Ingest and process news article
@@ -40,6 +50,70 @@ router.post('/ingest', async (req, res) => {
     res.status(500).json({
       error: 'Failed to process news article',
       message: error.message
+    });
+  }
+});
+
+// POST /api/v1/news/ingest/url - Ingest by scraping a real article URL
+router.post('/ingest/url', async (req, res) => {
+  try {
+    const { error, value } = urlIngestionSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        error: 'Validation error',
+        details: error.details.map(d => d.message)
+      });
+    }
+
+    const scraped = await ingestionService.ingestFromUrl(value.url);
+    const enriched = await newsService.processNewsArticle(scraped);
+
+    return res.status(201).json({
+      message: 'News ingested from URL successfully',
+      id: enriched.id,
+      data: enriched
+    });
+  } catch (err) {
+    logger.error('Error in URL ingestion:', err);
+    return res.status(500).json({
+      error: 'Failed to ingest from URL',
+      message: err.message
+    });
+  }
+});
+
+// POST /api/v1/news/ingest/rss - Ingest latest items from an RSS feed
+router.post('/ingest/rss', async (req, res) => {
+  try {
+    const { error, value } = rssIngestionSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        error: 'Validation error',
+        details: error.details.map(d => d.message)
+      });
+    }
+
+    const items = await ingestionService.ingestFromRss(value.feed_url, value.limit);
+    const results = [];
+    for (const item of items) {
+      try {
+        const enriched = await newsService.processNewsArticle(item);
+        results.push({ ok: true, id: enriched.id, title: enriched.title });
+      } catch (e) {
+        results.push({ ok: false, error: e.message, title: item.title });
+      }
+    }
+
+    return res.status(201).json({
+      message: 'RSS ingestion completed',
+      count: results.length,
+      results
+    });
+  } catch (err) {
+    logger.error('Error in RSS ingestion:', err);
+    return res.status(500).json({
+      error: 'Failed to ingest from RSS',
+      message: err.message
     });
   }
 });
